@@ -12,11 +12,15 @@ function ensure_gcloud {
   fi
 
   gcloud config set project "$GCP_PROJECT_ID"
-  local default_credentials_path=~/.config/gcloud/application_default_credentials.json
-  if [ ! -f "$default_credentials_path" ]; then
-      gcloud auth application-default login
+  if [ -z "$GOOGLE_APPLICATION_CREDENTIALS" ]; then
+    local default_credentials_path=~/.config/gcloud/application_default_credentials.json
+    if [ ! -f "$default_credentials_path" ]; then
+        gcloud auth application-default login
+    else
+      echo "Using default credentials $default_credentials_path"
+    fi
   else
-    echo "Using default credentials $default_credentials_path"
+    gcloud auth activate-service-account --key-file "$GOOGLE_APPLICATION_CREDENTIALS"
   fi
 }
 
@@ -31,8 +35,14 @@ function ensure_terraform {
   export PATH="$(pwd)/bin:$PATH"
 }
 
+function task_capture {
+  ensure_gcloud
+
+  pipenv run python python/main.py
+}
+
 function task_usage {
-  echo 'Usage: ./run.sh tf'
+  echo 'Usage: ./run.sh tf | capture'
   exit 1
 }
 
@@ -49,5 +59,6 @@ cmd=$1
 shift || true
 case "$cmd" in
   tf) task_tf "$@" ;;
+  capture) task_capture ;;
   *)     task_usage ;;
 esac
