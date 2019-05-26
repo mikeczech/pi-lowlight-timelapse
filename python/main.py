@@ -1,3 +1,4 @@
+import os
 from time import sleep
 from picamera import PiCamera
 from fractions import Fraction
@@ -35,6 +36,7 @@ def main():
     camera.start_preview()
     sleep(2) # wait for the camera
 
+    capture_id = uuid.uuid4()
     stream = BytesIO()
     counter = 0
 
@@ -46,14 +48,14 @@ def main():
         image = Image.open(stream).rotate(180)
         image_bytes = BytesIO()
         image.save(image_bytes, format='jpeg')
+        image_bytes.seek(0)
 
-        filename = "{}/img-{:09d}.jpg".format(str(uuid.uuid4()), counter)
-        print("Uploading file {}...".format(filename))
-        upload_blob('corded-terrain-224220-image-store-bucket', image_bytes, filename)
+        filename = "{}/img-{:09d}.jpg".format(str(capture_id), counter)
+        print("Uploading file {}... ({} bytes)".format(filename, image_bytes.getbuffer().nbytes))
+        upload_blob('{}-image-store-bucket'.format(os.environ['GCP_PROJECT_ID']), image_bytes, filename)
         counter += 1
 
         # reset the stream
-        stream.seek(0)
         stream.truncate(0)
         stream.seek(0)
 
